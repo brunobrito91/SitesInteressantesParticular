@@ -1,7 +1,9 @@
 package br.edu.ifspsaocarlos.sitesinteressantes;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -18,7 +20,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import br.edu.ifspsaocarlos.sitesinteressantes.adapter.ListaSiteAdapter;
 import br.edu.ifspsaocarlos.sitesinteressantes.model.Site;
@@ -31,6 +35,10 @@ public class ListaSiteActivity extends AppCompatActivity {
     private static final int NOVO_SITE = 1;
     private ListView listView;
     private List<Site> sites;
+    private SharedPreferences sharedPreferences;
+    private SharedPreferences.Editor editor;
+    private Set<String> sitesUrl;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,8 +47,15 @@ public class ListaSiteActivity extends AppCompatActivity {
 
         listView = (ListView) findViewById(R.id.listViewSites);
         sites = new ArrayList<>();
-        sites.add(new Site("http://www.globo.com", R.mipmap.icone_favorito_on));
-        sites.add(new Site("http://www.google.com", R.mipmap.icone_favorito_off));
+
+        sharedPreferences = getSharedPreferences("SitesFavoritos", Context.MODE_PRIVATE);
+        editor = sharedPreferences.edit();
+
+        sitesUrl = sharedPreferences.getStringSet("sitesURL", new HashSet<String>());
+        for (String siteURL :
+                sitesUrl) {
+            sites.add(new Site(siteURL, sharedPreferences.getInt(siteURL, R.mipmap.icone_favorito_off)));
+        }
 
         ListAdapter listAdapter = new ListaSiteAdapter(this, 0, sites);
         listView.setAdapter(listAdapter);
@@ -65,7 +80,14 @@ public class ListaSiteActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == NOVO_SITE) {
             if (resultCode == RESULT_OK) {
-                sites.add((Site) data.getSerializableExtra("novoSite"));
+                Site site = (Site) data.getSerializableExtra("novoSite");
+                sites.add(site);
+                sitesUrl.add(site.getUrl());
+
+                editor.putInt(site.getUrl(), site.getIdImagemFavorito());
+                editor.putStringSet("sitesURL", sitesUrl);
+                editor.commit();
+
                 ((ArrayAdapter) listView.getAdapter()).notifyDataSetChanged();
                 Toast.makeText(this, "Novo site adicionado", Toast.LENGTH_SHORT).show();
             }
@@ -90,7 +112,9 @@ public class ListaSiteActivity extends AppCompatActivity {
             imageView.setImageResource(R.mipmap.icone_favorito_on);
             site.setIdImagemFavorito(R.mipmap.icone_favorito_on);
         }
-        ((ArrayAdapter)listView.getAdapter()).notifyDataSetChanged();
+        editor.putInt(site.getUrl(),site.getIdImagemFavorito());
+        editor.commit();
+        ((ArrayAdapter) listView.getAdapter()).notifyDataSetChanged();
     }
 
 
